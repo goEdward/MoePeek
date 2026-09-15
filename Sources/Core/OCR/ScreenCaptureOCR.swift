@@ -3,6 +3,18 @@ import Vision
 import os
 
 enum ScreenCaptureOCR {
+    @MainActor
+    static func copyRecognizedText(_ text: String, to pasteboard: NSPasteboard = .general) throws {
+        try Task.checkCancellation()
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw OCRError.noTextRecognized
+        }
+        pasteboard.clearContents()
+        guard pasteboard.setString(text, forType: .string) else {
+            throw OCRError.clipboardWriteFailed
+        }
+    }
+
     /// Atomically claim a one-shot flag. Returns `true` on first call, `false` thereafter.
     private static func claimOnce(_ lock: OSAllocatedUnfairLock<Bool>) -> Bool {
         lock.withLock { val in
@@ -13,6 +25,7 @@ enum ScreenCaptureOCR {
     }
     /// Launch interactive screen capture, OCR the captured image, and return recognized text.
     static func captureAndRecognize() async throws -> String {
+        try Task.checkCancellation()
         // Generate a unique temp file path to avoid concurrency conflicts
         let tmpURL = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("moepeek_ocr_\(UUID().uuidString).png")
@@ -44,6 +57,11 @@ enum ScreenCaptureOCR {
         }
 
         guard status == 0 else {
+            throw OCRError.captureCancelled
+        }
+        try Task.checkCancellation()
+        // Escape can also exit screencapture successfully without producing a file.
+        guard FileManager.default.fileExists(atPath: tmpURL.path) else {
             throw OCRError.captureCancelled
         }
 
@@ -105,12 +123,14 @@ enum OCRError: LocalizedError {
     case captureCancelled
     case captureReadFailed
     case noTextRecognized
+    case clipboardWriteFailed
 
     var errorDescription: String? {
         switch self {
         case .captureCancelled:  String(localized: "Screen capture was cancelled")
         case .captureReadFailed: String(localized: "Failed to read the captured image")
         case .noTextRecognized:  String(localized: "No text was recognized in the captured image")
+        case .clipboardWriteFailed: String(localized: "Failed to copy recognized text to the clipboard")
         }
     }
 }

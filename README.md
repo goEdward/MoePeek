@@ -30,6 +30,7 @@
 
 - **Select & Translate**: Select text in any app, get instant translation in a floating panel
 - **OCR Screenshot**: Capture a screen region and translate the recognized text
+- **OCR and Copy**: Capture a screen region and copy the recognized text directly, without translation
 - **Clipboard Translation**: Translate whatever's on your clipboard
 - **Manual Input**: Type or paste text to translate on demand
 
@@ -53,6 +54,7 @@
 - 3-tier text grabbing: Accessibility API → AppleScript → Clipboard fallback
 - Markdown rendering for LLM results, plus optional rich text capture that keeps formatting and images from apps like Word
 - Fully customizable keyboard shortcuts
+- Word pronunciation in Youdao (UK/US phonetics) and Google Translate (source/translation pronunciation or romanization, not necessarily IPA), when returned by the service. Copy and speech still use only the translation.
 - Built-in auto-updater via Sparkle
 
 ## Why MoePeek
@@ -88,6 +90,7 @@ On first launch, MoePeek walks you through an onboarding flow to grant the requi
 |--------|----------|
 | Translate Selection | `⌥ D` |
 | OCR Screenshot | `⌥ S` |
+| OCR and Copy | `⌥ ⇧ S` |
 | Manual Input | `⌥ A` |
 | Clipboard Translation | `⌥ V` |
 

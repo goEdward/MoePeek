@@ -63,6 +63,25 @@ protocol TranslationProvider: Sendable {
     @MainActor func makeSettingsView() -> AnyView
 }
 
+/// Non-streaming providers that also return word pronunciation metadata.
+protocol PronunciationTranslationProvider: TranslationProvider {
+    func translateResult(
+        _ text: String,
+        from sourceLang: String?,
+        to targetLang: String
+    ) async throws -> TranslationResult
+}
+
+extension PronunciationTranslationProvider {
+    func translateStream(
+        _ text: String,
+        from sourceLang: String?,
+        to targetLang: String
+    ) -> AsyncThrowingStream<String, Error> {
+        singleResultStream { try await translateResult(text, from: sourceLang, to: targetLang).text }
+    }
+}
+
 // MARK: - Parallel Model Support
 
 /// Maximum number of models that can be enabled for parallel translation per provider.

@@ -28,17 +28,18 @@ struct MenuItemView: View {
         .globalKeyboardShortcut(.inputTranslation)
 
         Button {
-            guard let coordinator = appDelegate.coordinator,
-                  let panelController = appDelegate.panelController else { return }
-            Task {
-                await coordinator.ocrAndTranslate()
-                if case .idle = coordinator.phase { return }
-                panelController.showAtCursor()
-            }
+            appDelegate.captureScreenshot(copyOnly: false)
         } label: {
             Label("Screenshot OCR", systemImage: "text.viewfinder")
         }
         .globalKeyboardShortcut(.ocrScreenshot)
+
+        Button {
+            appDelegate.captureScreenshot(copyOnly: true)
+        } label: {
+            Label("Screenshot OCR and Copy", systemImage: "doc.on.doc")
+        }
+        .globalKeyboardShortcut(.ocrCopy)
 
         Button {
             guard let coordinator = appDelegate.coordinator,
