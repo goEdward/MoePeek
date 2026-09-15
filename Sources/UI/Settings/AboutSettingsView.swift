@@ -46,6 +46,7 @@ struct AboutSettingsView: View {
                     .disabled(!updater.canCheckForUpdates)
 
                     Toggle("Automatically check for updates", isOn: $updater.automaticallyChecksForUpdates)
+                        .disabled(!updater.isUpdateServiceEnabled)
                 }
             }
 
