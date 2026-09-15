@@ -18,6 +18,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var triggerIconController: TriggerIconController!
     lazy var updaterController = UpdaterController()
     var settingsController: SettingsWindowController!
+    private var isCapturingScreenshot = false
+    private let ocrCopyFeedback = OCRCopyFeedbackController()
 
     func applicationDidFinishLaunching(_: Notification) {
         applyLanguageOverride()
@@ -239,11 +241,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         KeyboardShortcuts.onKeyUp(for: .ocrScreenshot) { [weak self] in
-            guard let self else { return }
-            Task { @MainActor in
-                await self.coordinator.ocrAndTranslate()
-                if case .idle = self.coordinator.phase { return }
-                self.panelController.showAtCursor()
+            Task { @MainActor [weak self] in
+                self?.captureScreenshot(copyOnly: false)
+            }
+        }
+
+        KeyboardShortcuts.onKeyUp(for: .ocrCopy) { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.captureScreenshot(copyOnly: true)
             }
         }
 
@@ -264,11 +269,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    // MARK: - Screenshot Actions
+
+    func captureScreenshot(copyOnly: Bool) {
+        guard !isCapturingScreenshot, coordinator != nil, panelController != nil else { return }
+        isCapturingScreenshot = true
+        if copyOnly { panelController.dismiss() }
+        triggerIconController?.dismissSilently()
+        ocrCopyFeedback.dismiss()
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.isCapturingScreenshot = false }
+            if copyOnly {
+                if await self.coordinator.ocrAndCopy() {
+                    self.ocrCopyFeedback.showCopied()
+                    return
+                }
+            } else {
+                await self.coordinator.ocrAndTranslate()
+            }
+            if case .idle = self.coordinator.phase { return }
+            self.panelController.showAtCursor()
+        }
+    }
+
     // MARK: - Selection Monitor
 
     private func setupSelectionMonitor() {
         selectionMonitor.onTextSelected = { [weak self] text, point in
-            guard let self, !self.panelController.isVisible else { return }
+            guard let self, !self.isCapturingScreenshot, !self.panelController.isVisible else { return }
             self.triggerIconController.show(text: text, near: point)
         }
 

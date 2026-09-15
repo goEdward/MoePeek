@@ -230,7 +230,8 @@ struct PopupView: View {
                                     onRetry: {
                                         coordinator.retryProvider(provider)
                                     },
-                                    attachments: coordinator.sourceAttachments
+                                    attachments: coordinator.sourceAttachments,
+                                    pronunciations: coordinator.providerPronunciations[provider.id] ?? []
                                 )
                             }
                         }

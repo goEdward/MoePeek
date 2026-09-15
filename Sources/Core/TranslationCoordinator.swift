@@ -28,6 +28,7 @@ final class TranslationCoordinator {
     private(set) var detectedLanguage: String?
     private(set) var targetLanguage: String = ""
     private(set) var providerStates: [String: ProviderState] = [:]
+    private(set) var providerPronunciations: [String: [WordPronunciation]] = [:]
     /// Setting a non-nil error also auto-unpins, so an error never appears in a frozen pinned panel.
     private(set) var globalError: String? {
         didSet {
@@ -92,11 +93,30 @@ final class TranslationCoordinator {
 
     /// Triggered by OCR shortcut: screen capture → OCR → translate.
     func ocrAndTranslate() async {
+        guard let text = await captureOCRText() else { return }
+        translate(text)
+    }
+
+    /// Copies recognized text without starting language detection or any provider requests.
+    func ocrAndCopy() async -> Bool {
+        guard let text = await captureOCRText() else { return false }
+        do {
+            try ScreenCaptureOCR.copyRecognizedText(text)
+            return true
+        } catch {
+            phase = .active
+            sourceText = ""
+            globalError = String(localized: "OCR failed: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    private func captureOCRText() async -> String? {
         guard permissionManager.isScreenRecordingGranted else {
             phase = .active
             sourceText = ""
             globalError = String(localized: "Screen recording permission not granted. Open Settings to enable it.")
-            return
+            return nil
         }
 
         let previousPhase = phase
@@ -104,14 +124,19 @@ final class TranslationCoordinator {
 
         do {
             let text = try await ScreenCaptureOCR.captureAndRecognize()
-            translate(text)
+            try Task.checkCancellation()
+            phase = previousPhase
+            return text
         } catch OCRError.captureCancelled {
+            phase = previousPhase
+        } catch is CancellationError {
             phase = previousPhase
         } catch {
             phase = .active
             sourceText = ""
             globalError = String(localized: "OCR failed: \(error.localizedDescription)")
         }
+        return nil
     }
 
     /// Read clipboard text and translate directly.
@@ -142,6 +167,7 @@ final class TranslationCoordinator {
         detectedLanguage = nil
         targetLanguage = Defaults[.targetLanguage]
         providerStates = [:]
+        providerPronunciations = [:]
         detectionResult = nil
         activeSlots = []
         phase = .active
@@ -173,6 +199,7 @@ final class TranslationCoordinator {
         cancelAll()
         clearCopyFeedback()
         globalError = nil
+        providerPronunciations = [:]
 
         sourceText = trimmed
         sourceAttachments = attachments
@@ -221,6 +248,7 @@ final class TranslationCoordinator {
     func retryProvider(_ provider: any TranslationProvider) {
         guard phase == .active, !sourceText.isEmpty else { return }
         activeTasks[provider.id]?.cancel()
+        providerPronunciations.removeValue(forKey: provider.id)
         providerStates[provider.id] = .waiting
         launchProvider(provider, text: sourceText, from: detectedLanguage, to: targetLanguage)
     }
@@ -232,13 +260,13 @@ final class TranslationCoordinator {
     }
 
     @discardableResult
-    func copyResult(forProviderID providerID: String) -> Bool {
+    func copyResult(forProviderID providerID: String, to pasteboard: NSPasteboard = .general) -> Bool {
         guard let rawText = providerStates[providerID]?.copyableText else { return false }
         let resultText = MarkdownSupport.removingAttachmentPlaceholders(rawText)
         guard !resultText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
 
-        NSPasteboard.general.clearContents()
-        guard NSPasteboard.general.setString(resultText, forType: .string) else { return false }
+        pasteboard.clearContents()
+        guard pasteboard.setString(resultText, forType: .string) else { return false }
         showCopyFeedback(forProviderID: providerID)
         return true
     }
@@ -252,6 +280,7 @@ final class TranslationCoordinator {
         detectedLanguage = nil
         targetLanguage = ""
         providerStates = [:]
+        providerPronunciations = [:]
         globalError = nil
         detectionResult = nil
         activeSlots = []
@@ -321,10 +350,17 @@ final class TranslationCoordinator {
 
         do {
             var accumulated = ""
-            for try await chunk in provider.translateStream(text, from: sourceLang, to: targetLang) {
+            if let pronunciationProvider = provider as? any PronunciationTranslationProvider {
+                let result = try await pronunciationProvider.translateResult(text, from: sourceLang, to: targetLang)
                 guard !Task.isCancelled else { return }
-                accumulated += chunk
-                providerStates[provider.id] = .streaming(partial: accumulated)
+                accumulated = result.text
+                providerPronunciations[provider.id] = result.pronunciations
+            } else {
+                for try await chunk in provider.translateStream(text, from: sourceLang, to: targetLang) {
+                    guard !Task.isCancelled else { return }
+                    accumulated += chunk
+                    providerStates[provider.id] = .streaming(partial: accumulated)
+                }
             }
 
             guard !Task.isCancelled else { return }

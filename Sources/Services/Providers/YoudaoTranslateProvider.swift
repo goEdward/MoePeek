@@ -12,7 +12,7 @@ private func youdaoMD5Hex(_ string: String) -> String {
 }
 
 /// Youdao Translate (有道翻译) provider using the free web API (no API key required).
-struct YoudaoTranslateProvider: TranslationProvider {
+struct YoudaoTranslateProvider: PronunciationTranslationProvider {
     let id = "youdao"
     let displayName = "Youdao"
     let iconSystemName = "character.book.closed.fill"
@@ -23,12 +23,8 @@ struct YoudaoTranslateProvider: TranslationProvider {
     @MainActor
     var isConfigured: Bool { true }
 
-    func translateStream(
-        _ text: String,
-        from sourceLang: String?,
-        to targetLang: String
-    ) -> AsyncThrowingStream<String, Error> {
-        singleResultStream { [self] in try await translate(text, from: sourceLang, to: targetLang) }
+    func translateResult(_ text: String, from sourceLang: String?, to targetLang: String) async throws -> TranslationResult {
+        try await translate(text, from: sourceLang, to: targetLang)
     }
 
     @MainActor
@@ -41,7 +37,7 @@ struct YoudaoTranslateProvider: TranslationProvider {
     private static let client = "fanyideskweb"
     private static let product = "webfanyi"
 
-    private func translate(_ text: String, from sourceLang: String?, to targetLang: String, retryCount: Int = 0) async throws -> String {
+    private func translate(_ text: String, from sourceLang: String?, to targetLang: String, retryCount: Int = 0) async throws -> TranslationResult {
         let sl = LanguageCodeMapping.resolve(sourceLang, using: LanguageCodeMapping.youdao) ?? "auto"
         let tl = LanguageCodeMapping.resolveTarget(targetLang, using: LanguageCodeMapping.youdao)
 
@@ -57,7 +53,7 @@ struct YoudaoTranslateProvider: TranslationProvider {
             "i=\(URLFormEncoding.encode(text))",
             "from=\(URLFormEncoding.encode(sl))",
             "to=\(URLFormEncoding.encode(tl))",
-            "dictResult=false",
+            "dictResult=\(WordPronunciation.isSingleWord(text) ? "true" : "false")",
             "keyid=webfanyi",
             "sign=\(URLFormEncoding.encode(sign))",
             "client=\(Self.client)",
@@ -138,27 +134,68 @@ struct YoudaoTranslateProvider: TranslationProvider {
             )
         }
 
-        let result = decoded.translateResult
-            .map { group in group.map(\.tgt).joined() }
-            .joined(separator: "\n")
-
-        guard !result.isEmpty else {
-            throw TranslationError.emptyResult
-        }
-
-        return result
+        return try decoded.result(for: text)
     }
 
 }
 
 // MARK: - Response Models
 
-private struct YoudaoTranslateResponse: Decodable {
+struct YoudaoTranslateResponse: Decodable {
     let code: Int
     let translateResult: [[TranslateResultItem]]
+    let dictResult: DictionaryResult?
+
+    enum CodingKeys: String, CodingKey {
+        case code, translateResult, dictResult
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        code = try container.decode(Int.self, forKey: .code)
+        translateResult = try container.decodeIfPresent([[TranslateResultItem]].self, forKey: .translateResult) ?? []
+        dictResult = try? container.decodeIfPresent(DictionaryResult.self, forKey: .dictResult)
+    }
 
     struct TranslateResultItem: Decodable {
         let tgt: String
+    }
+
+    struct DictionaryResult: Decodable {
+        let ec: EnglishChinese?
+
+        struct EnglishChinese: Decodable {
+            let word: Word?
+        }
+
+        struct Word: Decodable {
+            let ukphone: String?
+            let usphone: String?
+            let returnPhrase: String?
+
+            enum CodingKeys: String, CodingKey {
+                case ukphone, usphone
+                case returnPhrase = "return-phrase"
+            }
+        }
+    }
+
+    func result(for sourceText: String) throws -> TranslationResult {
+        let translated = translateResult.map { $0.map(\.tgt).joined() }.joined(separator: "\n")
+        guard !translated.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw TranslationError.emptyResult
+        }
+        guard WordPronunciation.isSingleWord(sourceText), let word = dictResult?.ec?.word else {
+            return TranslationResult(text: translated)
+        }
+        if let phrase = word.returnPhrase,
+           phrase.caseInsensitiveCompare(sourceText.trimmingCharacters(in: .whitespacesAndNewlines)) != .orderedSame {
+            return TranslationResult(text: translated)
+        }
+        return TranslationResult(text: translated, pronunciations: [
+            WordPronunciation(kind: .british, text: word.ukphone),
+            WordPronunciation(kind: .american, text: word.usphone),
+        ].compactMap { $0 })
     }
 }
 

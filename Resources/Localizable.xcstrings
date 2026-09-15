@@ -1,6 +1,86 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Screenshot OCR and Copy" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "截图识别并复制"
+          }
+        }
+      }
+    },
+    "Screenshot OCR and Copy:" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "截图识别并复制："
+          }
+        }
+      }
+    },
+    "Recognized text copied" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "识别文字已复制"
+          }
+        }
+      }
+    },
+    "Failed to copy recognized text to the clipboard" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法将识别文字复制到剪贴板"
+          }
+        }
+      }
+    },
+    "UK pronunciation" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "英式音标"
+          }
+        }
+      }
+    },
+    "US pronunciation" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "美式音标"
+          }
+        }
+      }
+    },
+    "Source pronunciation" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原文发音"
+          }
+        }
+      }
+    },
+    "Translation pronunciation" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "译文发音"
+          }
+        }
+      }
+    },
     "Nothing to translate after removing images." : {
       "localizations" : {
         "zh-Hans" : {

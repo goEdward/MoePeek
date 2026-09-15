@@ -50,6 +50,7 @@ struct GeneralSettingsView: View {
             Section("Keyboard Shortcuts") {
                 GlobalShortcutRecorder("Selection Translation:", name: .translateSelection)
                 GlobalShortcutRecorder("Screenshot OCR:", name: .ocrScreenshot)
+                GlobalShortcutRecorder("Screenshot OCR and Copy:", name: .ocrCopy)
                 GlobalShortcutRecorder("Manual Translation:", name: .inputTranslation)
                 GlobalShortcutRecorder("Clipboard Translation:", name: .clipboardTranslation)
 

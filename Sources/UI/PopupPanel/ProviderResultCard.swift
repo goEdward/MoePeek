@@ -12,6 +12,7 @@ struct ProviderResultCard: View {
     var onCopy: (() -> Void)?
     var onRetry: (() -> Void)?
     var attachments: [String: SourceImageAttachment] = [:]
+    var pronunciations: [WordPronunciation] = []
     @State private var isCopyPulsing = false
     @State private var pulseTask: Task<Void, Never>?
     @Default(.popupFontSize) private var fontSize
@@ -167,6 +168,18 @@ struct ProviderResultCard: View {
         let spokenText = MarkdownSupport.speakableText(text)
 
         return VStack(alignment: .leading, spacing: 4) {
+            ForEach(pronunciations, id: \.kind) { pronunciation in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(pronunciation.kind.label)
+                        .font(.popup(name: fontName, size: CGFloat(fontSize - 2)))
+                        .foregroundStyle(.secondary)
+                    Text(pronunciation.text)
+                        .font(font)
+                        .textSelection(.enabled)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             if offersMarkdown && viewMode != .source {
                 MarkdownResultView(text: text, font: font, attachments: attachments, showsAttachments: viewMode == .rich)
                     .frame(maxWidth: .infinity, alignment: .leading)
