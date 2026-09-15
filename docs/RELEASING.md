@@ -11,7 +11,7 @@
 
 自用包不会启动 Sparkle，也不包含上游更新地址，避免自动更新覆盖 fork 的功能。此工作流仅上传构建产物，不发布 Release。
 
-安装完整 Xcode 和仓库指定版本的 Tuist 后，也可在本地运行 `bash scripts/build-personal-dmg.sh 0.19.0`；输出位于 `build/personal-dmg/`。本地脚本负责打包，测试可另用 `xcodebuild test -workspace MoePeek.xcworkspace -scheme MoePeek` 运行。
+安装完整 Xcode 和仓库指定版本的 Tuist 后，也可在本地运行 `bash scripts/build-personal-dmg.sh 0.19.0`；输出位于 `build/personal-dmg/`。本地脚本负责打包，测试可另用 `xcodebuild test -workspace MoePeek.xcworkspace -scheme MoePeekUnitTests` 运行。专用测试方案会关闭应用启动时的更新检查、权限提示和全局快捷键注册。
 
 ## 前置条件
 

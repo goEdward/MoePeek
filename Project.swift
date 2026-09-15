@@ -70,5 +70,16 @@ let project = Project(
                 .target(name: "MoePeek"),
             ]
         ),
+    ],
+    schemes: [
+        .scheme(
+            name: "MoePeekUnitTests",
+            shared: true,
+            buildAction: .buildAction(targets: ["MoePeekTests"]),
+            testAction: .targets(
+                ["MoePeekTests"],
+                arguments: .arguments(environmentVariables: ["MOEPEEK_UNIT_TESTS": "1"])
+            )
+        ),
     ]
 )

@@ -18,7 +18,8 @@ final class UpdaterController {
         }
     }
 
-    init(updatesDisabled: Bool = Bundle.main.object(forInfoDictionaryKey: "MoePeekDisableUpdates") as? Bool == true) {
+    init(updatesDisabled: Bool = ProcessInfo.processInfo.environment["MOEPEEK_UNIT_TESTS"] == "1"
+        || Bundle.main.object(forInfoDictionaryKey: "MoePeekDisableUpdates") as? Bool == true) {
         guard !updatesDisabled else {
             sparkleController = nil
             return

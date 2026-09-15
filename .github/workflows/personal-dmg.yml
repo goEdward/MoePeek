@@ -43,7 +43,7 @@ jobs:
           mkdir -p build
           xcodebuild test \
             -workspace MoePeek.xcworkspace \
-            -scheme MoePeek \
+            -scheme MoePeekUnitTests \
             -configuration Debug \
             -destination 'platform=macOS,arch=arm64' \
             -derivedDataPath build/DerivedData \

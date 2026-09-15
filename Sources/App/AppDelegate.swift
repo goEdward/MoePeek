@@ -23,7 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_: Notification) {
         // Hosted unit tests must not start Sparkle, permission prompts, or global shortcuts.
-        guard NSClassFromString("XCTestCase") == nil else { return }
+        guard ProcessInfo.processInfo.environment["MOEPEEK_UNIT_TESTS"] != "1" else { return }
 
         applyLanguageOverride()
 
