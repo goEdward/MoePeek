@@ -1,0 +1,78 @@
+name: Build Personal DMG
+
+on:
+  push:
+    branches:
+      - build/personal-dmg
+  workflow_dispatch:
+    inputs:
+      version:
+        description: App version (major.minor.patch)
+        required: true
+        default: "0.19.0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: personal-dmg-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 40
+    env:
+      APP_VERSION: ${{ inputs.version || '0.19.0' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Tuist
+        uses: jdx/mise-action@v2
+
+      - name: Generate project
+        run: |
+          cp Configurations/Signing.xcconfig.example Configurations/Signing.xcconfig
+          tuist install
+          tuist generate --no-open
+
+      - name: Test
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild test \
+            -workspace MoePeek.xcworkspace \
+            -scheme MoePeekUnitTests \
+            -configuration Debug \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath build/DerivedData \
+            -resultBundlePath build/TestResults.xcresult \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
+            VALIDATE_STRINGS_FILES_WHILE_COPYING=NO \
+            | tee build/test.log
+
+      - name: Build DMG
+        run: bash scripts/build-personal-dmg.sh "$APP_VERSION"
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: MoePeek-personal-arm64
+          path: |
+            build/personal-dmg/*.dmg
+            build/personal-dmg/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload build and test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MoePeek-build-logs
+          path: |
+            build/test.log
+            build/personal-dmg/build.log
+            build/TestResults.xcresult
+          if-no-files-found: ignore
+          retention-days: 14

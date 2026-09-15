@@ -22,6 +22,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let ocrCopyFeedback = OCRCopyFeedbackController()
 
     func applicationDidFinishLaunching(_: Notification) {
+        // Hosted unit tests must not start Sparkle, permission prompts, or global shortcuts.
+        guard ProcessInfo.processInfo.environment["MOEPEEK_UNIT_TESTS"] != "1" else { return }
+
         applyLanguageOverride()
 
         // Migrate old settings to new namespaced keys (one-time)

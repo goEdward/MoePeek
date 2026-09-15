@@ -1,5 +1,18 @@
 # 发版指南
 
+## 自用 DMG（无需 Apple 证书）
+
+`Build Personal DMG` 工作流使用 GitHub 的 macOS/Xcode 环境运行测试，再生成 Apple 芯片 Mac 使用的临时签名安装包。无需配置 `Prod` 环境或任何签名密钥。
+
+1. 在 Actions 中启用仓库工作流。
+2. 向 `build/personal-dmg` 分支推送修改会自动开始构建。工作流合入默认分支后，也可以通过 **Actions > Build Personal DMG > Run workflow** 手动运行，版本格式为 `major.minor.patch`。
+3. 构建成功后，在该次运行的 **Artifacts** 中下载 `MoePeek-personal-arm64`，解压取得 DMG 和 SHA-256 校验文件。安装包保存 30 天。
+4. 打开 DMG，把 `MoePeek.app` 拖入 Applications。临时签名未经过 Apple 公证，首次启动可能需要在“系统设置 > 隐私与安全性”中允许打开；更换版本后可能需要重新授予辅助功能和屏幕录制权限。
+
+自用包不会启动 Sparkle，也不包含上游更新地址，避免自动更新覆盖 fork 的功能。此工作流仅上传构建产物，不发布 Release。
+
+安装完整 Xcode 和仓库指定版本的 Tuist 后，也可在本地运行 `bash scripts/build-personal-dmg.sh 0.19.0`；输出位于 `build/personal-dmg/`。本地脚本负责打包，测试可另用 `xcodebuild test -workspace MoePeek.xcworkspace -scheme MoePeekUnitTests` 运行。专用测试方案会关闭应用启动时的更新检查、权限提示和全局快捷键注册。
+
 ## 前置条件
 
 ### GitHub Secrets
